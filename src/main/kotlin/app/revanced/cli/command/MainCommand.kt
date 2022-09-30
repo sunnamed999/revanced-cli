@@ -190,7 +190,7 @@ internal object MainCommand : Runnable {
             .also { it.add(baseApk) }
 
         // prepare patches
-        val allPatches = patchArgs.patchBundles.flatMap { bundle -> JarPatchBundle(bundle).loadPatches() }.also {
+        val allPatches = patchArgs.patchBundles.flatMap { bundle -> PatchBundle.Jar(bundle).loadPatches() }.also {
             OptionsLoader.init(patchArgs.options, it)
         }
 

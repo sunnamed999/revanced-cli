@@ -12,7 +12,7 @@ import app.revanced.patcher.extensions.PatchExtensions.include
 import app.revanced.patcher.extensions.PatchExtensions.patchName
 import app.revanced.patcher.patch.Patch
 
-fun Patcher.addPatchesFiltered(allPatches: List<Class<out Patch<Data>>>, baseApk: Apk.Base) {
+fun Patcher.addPatchesFiltered(allPatches: List<Class<out Patch<Context>>>, baseApk: Apk.Base) {
     val packageName = baseApk.packageMetadata.packageName
     val packageVersion = baseApk.packageMetadata.packageVersion
 
