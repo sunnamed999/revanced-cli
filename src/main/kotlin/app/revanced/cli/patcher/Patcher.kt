@@ -1,7 +1,7 @@
 package app.revanced.cli.patcher
 
 import app.revanced.patcher.Apk
-import app.revanced.patcher.data.Data
+import app.revanced.patcher.data.Context
 import app.revanced.patcher.patch.Patch
 import app.revanced.utils.patcher.addPatchesFiltered
 import app.revanced.utils.patcher.applyPatchesVerbose

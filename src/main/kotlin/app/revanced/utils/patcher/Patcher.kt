@@ -5,7 +5,7 @@ import app.revanced.cli.command.MainCommand.args
 import app.revanced.cli.command.MainCommand.logger
 import app.revanced.patcher.Apk
 import app.revanced.patcher.Patcher
-import app.revanced.patcher.data.Data
+import app.revanced.patcher.data.Context
 import app.revanced.patcher.extensions.PatchExtensions.compatiblePackages
 import app.revanced.patcher.extensions.PatchExtensions.deprecated
 import app.revanced.patcher.extensions.PatchExtensions.include
@@ -16,7 +16,7 @@ fun Patcher.addPatchesFiltered(allPatches: List<Class<out Patch<Data>>>, baseApk
     val packageName = baseApk.packageMetadata.packageName
     val packageVersion = baseApk.packageMetadata.packageVersion
 
-    val includedPatches = mutableListOf<Class<out Patch<Data>>>()
+    val includedPatches = mutableListOf<Class<out Patch<Context>>>()
     allPatches.forEach patchLoop@{ patch ->
         val compatiblePackages = patch.compatiblePackages
         val patchName = patch.patchName
@@ -67,7 +67,7 @@ fun Patcher.addPatchesFiltered(allPatches: List<Class<out Patch<Data>>>, baseApk
 }
 
 fun Patcher.applyPatchesVerbose() {
-    this.applyPatches().forEach { (patch, result) ->
+    this.executePatches().forEach { (patch, result) ->
         if (result.isSuccess) {
             logger.info("$patch succeeded")
             return@forEach

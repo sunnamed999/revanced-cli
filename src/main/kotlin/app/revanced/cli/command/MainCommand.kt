@@ -12,7 +12,7 @@ import app.revanced.patcher.PatcherOptions
 import app.revanced.patcher.extensions.PatchExtensions.compatiblePackages
 import app.revanced.patcher.extensions.PatchExtensions.description
 import app.revanced.patcher.extensions.PatchExtensions.patchName
-import app.revanced.patcher.util.patch.impl.JarPatchBundle
+import app.revanced.patcher.util.patch.PatchBundle
 import app.revanced.utils.OptionsLoader
 import app.revanced.utils.adb.Adb
 import app.revanced.utils.filesystem.FileSystemUtils
@@ -386,7 +386,8 @@ internal object MainCommand : Runnable {
 
     private fun printListOfPatches() {
         val logged = mutableListOf<String>()
-        for (patchBundlePath in args.patchArgs?.patchBundles!!) for (patch in JarPatchBundle(patchBundlePath).loadPatches()) {
+        for (patchBundlePath in args.patchArgs?.patchBundles!!) for (patch in PatchBundle.Jar(patchBundlePath)
+            .loadPatches()) {
             if (patch.patchName in logged) continue
             for (compatiblePackage in patch.compatiblePackages!!) {
                 val packageEntryStr = buildString {
