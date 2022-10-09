@@ -60,7 +60,7 @@ internal object MainCommand : Runnable {
      * Arguments for apk files.
      */
     class ApkArgs {
-        @Option(names = ["-a", "-apk"], description = ["The base apk file that is to be patched"], required = true)
+        @Option(names = ["-a", "--base-apk"], description = ["The base apk file that is to be patched"], required = true)
         lateinit var baseApk: String
 
         @Option(names = ["--language-apk"], description = ["Additional split apk file which contains language files"])
