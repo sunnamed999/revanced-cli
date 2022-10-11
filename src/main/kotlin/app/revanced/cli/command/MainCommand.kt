@@ -1,23 +1,26 @@
 package app.revanced.cli.command
 
-import app.revanced.cli.aligning.Aligning
 import app.revanced.cli.logging.impl.DefaultCliLogger
 import app.revanced.cli.patcher.Patcher.start
 import app.revanced.cli.patcher.logging.impl.PatcherLogger
-import app.revanced.cli.signing.Signing
 import app.revanced.cli.signing.SigningOptions
-import app.revanced.patcher.Apk
 import app.revanced.patcher.Patcher
 import app.revanced.patcher.PatcherOptions
+import app.revanced.patcher.apk.Apk
+import app.revanced.patcher.apk.SplitApkFile
 import app.revanced.patcher.extensions.PatchExtensions.compatiblePackages
 import app.revanced.patcher.extensions.PatchExtensions.description
 import app.revanced.patcher.extensions.PatchExtensions.patchName
 import app.revanced.patcher.util.patch.PatchBundle
 import app.revanced.utils.OptionsLoader
 import app.revanced.utils.adb.Adb
-import app.revanced.utils.filesystem.FileSystemUtils
+import app.revanced.utils.filesystem.ZipFileUtils
+import app.revanced.utils.signing.Signer
+import app.revanced.utils.signing.align.ZipAligner
 import picocli.CommandLine.*
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 private class CLIVersionProvider : IVersionProvider {
     override fun getVersion() = arrayOf(
@@ -40,10 +43,7 @@ internal object MainCommand : Runnable {
      * Arguments for the CLI
      */
     class Args {
-        @ArgGroup(exclusive = false, multiplicity = "1")
-        val apkArgs: ApkArgs? = null
-
-        @Option(names = ["--uninstall"], description = ["Uninstall the mounted apk by the package name"])
+        @Option(names = ["--uninstall"], description = ["Uninstall the mounted apk by its package name"])
         var uninstall: String? = null
 
         @Option(names = ["-d", "--deploy-on"], description = ["If specified, deploy to adb device with given name"])
@@ -57,7 +57,7 @@ internal object MainCommand : Runnable {
     }
 
     /**
-     * Arguments for apk files.
+     * Arguments for [Apk] files.
      */
     class ApkArgs {
         @Option(names = ["-a", "--base-apk"], description = ["The base apk file that is to be patched"], required = true)
@@ -111,6 +111,9 @@ internal object MainCommand : Runnable {
      * Arguments for patching.
      */
     class PatchingArgs {
+        @ArgGroup(exclusive = false, multiplicity = "1")
+        val apkArgs: ApkArgs? = null
+
         @Option(names = ["-o", "--out"], description = ["Output folder path"], required = true)
         lateinit var outputPath: File
 
@@ -177,17 +180,14 @@ internal object MainCommand : Runnable {
         }
 
         // prepare apks
-        val apkArgs = args.apkArgs!!
+        val apkArgs = patchingArgs.apkArgs!!
+
         val baseApk = Apk.Base(apkArgs.baseApk)
         val splitApks = buildList {
             apkArgs.languageApk?.let { add(Apk.Split.Language(it)) }
             apkArgs.libraryApk?.let { add(Apk.Split.Library(it)) }
             apkArgs.assetApk?.let { add(Apk.Split.Asset(it)) }
         }
-
-        val allApks = mutableListOf<Apk>()
-            .also { it.addAll(splitApks) }
-            .also { it.add(baseApk) }
 
         // prepare patches
         val allPatches = patchArgs.patchBundles.flatMap { bundle -> PatchBundle.Jar(bundle).loadPatches() }.also {
@@ -197,10 +197,10 @@ internal object MainCommand : Runnable {
         // prepare the patcher
         val patcher = Patcher( // constructor decodes base
             PatcherOptions(
-                allApks,
-                resourceCacheDirectory = patchingArgs.cacheDirectory.path,
+                SplitApkFile(baseApk, splitApks),
+                cacheDirectory.path,
                 patchingArgs.aaptPath,
-                frameworkPath = patchingArgs.cacheDirectory.path,
+                cacheDirectory.path,
                 PatcherLogger
             )
         )
@@ -214,166 +214,169 @@ internal object MainCommand : Runnable {
             }
         }
 
-        // define temporal directories
-        val rawDirectory = cacheDirectory.resolve("raw")
-        val alignedDirectory = cacheDirectory.resolve("aligned").also(File::mkdirs)
-        val signedDirectory = cacheDirectory.resolve("signed").also(File::mkdirs)
-
-        /**
-         * Clean up a temporal directory.
-         *
-         * @param directory The directory to clean up.
-         */
-        fun delete(directory: File, force: Boolean = false) {
-            if (!force && !patchingArgs.lowStorage) return
-            if (!directory.deleteRecursively())
-                return logger.error("Failed to delete directory $directory")
-        }
-
-        /**
-         * Creates the apk file with the patches resources.
-         *
-         * @param apk The apk file to write.
-         * @return The new patched apk file.
-         */
-        fun writeToNewApk(apk: Apk): File {
-            val packageName = apk.packageMetadata.packageName
+        with(cacheDirectory.resolve("cli")) {
+            // define temporal directories
+            val patched = resolve("patched")
+            val alignedDirectory = resolve("aligned").also(File::mkdirs)
+            val signedDirectory = resolve("signed").also(File::mkdirs)
 
             /**
-             * Copies the patched apk file to the file specified.
+             * Clean up a temporal directory.
              *
-             * @param file The file to copy to.
+             * @param directory The directory to clean up.
              */
-            fun copyToFile(file: File) {
-                FileSystemUtils(file).use { apkFileSystem ->
-                    // copy resources for that apk to the cached apk
-                    apk.resources?.let { apkResources ->
-                        logger.info("Writing resources for $packageName")
-                        FileSystemUtils(apkResources).use { resourcesFileStream ->
-                            // get the resources from the resources file and write them to the cached apk
-                            val resourceFiles = resourcesFileStream.getFile(File.separator)
-                            apkFileSystem.writePathRecursively(resourceFiles)
+            fun delete(directory: File, force: Boolean = false) {
+                if (!force && !patchingArgs.lowStorage) return
+                if (!directory.deleteRecursively())
+                    return logger.error("Failed to delete directory $directory")
+            }
+
+            /**
+             * Creates the [Apk] file with the patches resources.
+             *
+             * @param apk The [Apk] file to write.
+             * @return The new patched [Apk] file.
+             */
+            fun writeToNewApk(apk: Apk): File {
+                val packageName = apk.packageMetadata.packageName ?: "split apk"
+
+                /**
+                 * Writes the [Apk] patch to the file specified.
+                 *
+                 * @param file The file to copy to.
+                 */
+                fun writeToFile(file: File) {
+                    ZipFileUtils(file).use { apkFileSystem ->
+                        // copy resources for that apk to the cached apk
+                        apk.resources?.let { apkResources ->
+                            logger.info("Writing resources for $packageName")
+                            ZipFileUtils(apkResources).use { resourcesFileStream ->
+                                // get the resources from the resources file and write them to the cached apk
+                                val resourceFiles = resourcesFileStream.getFsPath(File.separator)
+                                apkFileSystem.write(resourceFiles)
+                            }
+
+                            // store resources which are doNotCompress
+                            // TODO(perf): make FileSystemUtils compress by default
+                            //  by using app.revanced.utils.signing.align.zip.ZipFile
+                            apk.packageMetadata.doNotCompress.forEach(apkFileSystem::decompress)
                         }
 
-                        // store resources which are doNotCompress
-                        // TODO(perf): make FileSystemUtils not compress by default
-                        //  by using app.revanced.utils.signing.align.zip.ZipFile
-                        apk.packageMetadata.doNotCompress.forEach(apkFileSystem::uncompress)
-                    }
-
-                    // copy dex files for that apk to the cached apk, if it is a base apk
-                    if (apk is Apk.Base) {
-                        logger.info("Writing dex files for $packageName")
-                        apk.dexFiles.forEach { dexFile ->
-                            apkFileSystem.write(dexFile.name, dexFile.stream.readAllBytes())
+                        // copy dex files for that apk to the cached apk, if it is a base apk
+                        if (apk is Apk.Base) {
+                            logger.info("Writing dex files for $packageName")
+                            apk.dexFiles.forEach { dexFile ->
+                                apkFileSystem.write(dexFile.name, dexFile.stream.readAllBytes())
+                            }
                         }
                     }
                 }
+
+                return patched.resolve(apk.file.name) // no need to mkdirs, because copyTo will create the path
+                    .also { apk.file.copyTo(it) } // write a copy of the original file
+                    .also(::writeToFile) // write patches to that file
             }
 
-            return rawDirectory.resolve(apk.file.name) // no need to mkdirs, because copyTo will create the path
-                .also { apk.file.copyTo(it) } // write a copy of the original file
-                .also(::copyToFile) // write patches to that file
-        }
+            /**
+             * Alin the raw [Apk] file.
+             *
+             * @param unalignedApkFile The apk file to align.
+             * @return The aligned [Apk] file.
+             */
+            fun alignApk(unalignedApkFile: File): File {
+                logger.info("Aligning ${unalignedApkFile.name}")
+                return alignedDirectory.resolve(unalignedApkFile.name)
+                    .also { alignedApk -> ZipAligner.align(unalignedApkFile, alignedApk) }
+            }
 
-        /**
-         * Alin the raw apk file.
-         *
-         * @param unalignedApkFile The apk file to align.
-         * @return The aligned apk file.
-         */
-        fun alignApk(unalignedApkFile: File): File {
-            logger.info("Aligning ${unalignedApkFile.name}")
-            return alignedDirectory.resolve(unalignedApkFile.name)
-                .also { alignedApk -> Aligning.align(unalignedApkFile, alignedApk) }
-        }
-
-        /**
-         * Sign a list of apk files.
-         *
-         * @param unsignedApks The list of apk files to sign.
-         */
-        fun signApks(unsignedApks: List<File>) = if (!args.mount) {
-            unsignedApks.map { unsignedApk -> // sign the unsigned apk
-                logger.info("Signing ${unsignedApk.name}")
-                signedDirectory.resolve(unsignedApk.name)
-                    .also { signedApk ->
-                        Signing.sign(
-                            unsignedApk,
-                            signedApk,
-                            SigningOptions(
-                                patchingArgs.cn,
-                                patchingArgs.password,
-                                patchingArgs.keystorePath ?: patchingArgs
-                                    .outputPath
-                                    .absoluteFile
-                                    .parentFile
-                                    .resolve("${baseApk.file.nameWithoutExtension}.keystore")
-                                    .canonicalPath
+            /**
+             * Sign a list of [Apk] files.
+             *
+             * @param unsignedApks The list of [Apk] files to sign.
+             * @return The list of signed [Apk] files.
+             */
+            fun signApks(unsignedApks: List<File>) = if (!args.mount) {
+                unsignedApks.map { unsignedApk -> // sign the unsigned apk
+                    logger.info("Signing ${unsignedApk.name}")
+                    signedDirectory.resolve(unsignedApk.name)
+                        .also { signedApk ->
+                            Signer(
+                                SigningOptions(
+                                    patchingArgs.cn,
+                                    patchingArgs.password,
+                                    patchingArgs.keystorePath
+                                        ?: patchingArgs.outputPath.absoluteFile.parentFile.resolve("${baseApk.file.nameWithoutExtension}.keystore").canonicalPath
+                                )
+                            ).signApk(
+                                unsignedApk, signedApk
                             )
-                        )
+                        }
+                }
+            } else {
+                unsignedApks
+            }
+
+            /**
+             * Copy an [Apk] file to the output directory.
+             *
+             * @param apk The [Apk] file to copy.
+             * @return The copied [Apk] file.
+             */
+            fun copyToOutput(apk: File): File {
+                logger.info("Copying ${apk.name} to output directory")
+
+                return patchingArgs.outputPath.also(File::mkdirs).resolve(apk.name).also {
+                    Files.copy(apk.toPath(), it.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                }
+            }
+
+            /**
+             * Install an [Apk] file to the device.
+             *
+             * @param apkFiles The [Apk] files to install.
+             * @return The input [Apk] file.
+             */
+            fun install(apkFiles: List<Pair<File, Apk>>) =
+                apkFiles.also { apkFile ->
+                    adb?.let { adb ->
+                        with(apkFile.map { (outputFile, apk) -> Adb.Apk(apk, outputFile) }) {
+                            adb.install(single { it.apk is Apk.Base }, filter { it.apk is Apk.Split })
+                        }
                     }
+                }.map { (outputApk, _) -> outputApk }
+
+            /**
+             * Clean up the cache directory and output files.
+             *
+             * @param outputApks The list of output [Apk] files.
+             */
+            fun cleanUp(outputApks: List<File>) {
+                // clean up the cache directory if needed
+                if (patchingArgs.clean) {
+                    delete(patchingArgs.cacheDirectory, true)
+                    if (args.deploy?.let { outputApks.any { !it.delete() } } == true)
+                        logger.error("Failed to delete some output files")
+                }
+                logger.info("Patching complete!")
+
             }
-        } else {
-            unsignedApks
-        }
 
-        /**
-         * Copy an apk file to the output directory.
-         *
-         * @param apk The apk file to copy.
-         */
-        fun copyToOutput(apk: File): File {
-            logger.info("Copying ${apk.name} to output directory")
-            return patchingArgs.outputPath.resolve(apk.name).also {
-                apk.copyTo(it, overwrite = true)
+            /**
+             * Run the patcher and save the patched resources
+             *
+             * @return The resulting patched [Apk] files.
+             */
+            fun Patcher.run() = with(this.start(allPatches, baseApk)) { save() }.files
+
+            with(patcher.run()) {
+                map(::writeToNewApk)
+                    .map(::alignApk).also { delete(patched) }
+                    .let(::signApks).also { delete(alignedDirectory) }
+                    .map(::copyToOutput).also { delete(signedDirectory) }.zip(this)
+                    .let(::install)
+                    .let(::cleanUp)
             }
         }
-
-        /**
-         * Install an apk file to the device.
-         *
-         * @param apkFile The apk file to install.
-         * @return The input apk file.
-         */
-        fun install(apkFile: Pair<File, Apk>): File {
-            val (outputFile, apk) = apkFile
-            adb?.install(Adb.Apk(apk).also { it.file = outputFile })
-            return outputFile
-        }
-
-        /**
-         * Clean up the cache directory and output files.
-         *
-         * @param outputApks The list of output apk files.
-         */
-        fun cleanUp(outputApks: List<File>) {
-            // clean up the cache directory if needed
-            if (patchingArgs.clean) {
-                delete(patchingArgs.cacheDirectory, true)
-                if (args.deploy?.let { outputApks.any { !it.delete() } } == true)
-                    logger.error("Failed to delete some output files")
-            }
-            logger.info("Patching complete!")
-
-        }
-
-        /**
-         * Run the patcher and save the patched resources
-         */
-        fun Patcher.run() = this.also {
-            // start patching
-            it.start(allPatches, baseApk)
-        }.save() // save the patched resources
-
-        val patchedApks = patcher.run().files
-        patchedApks
-            .map(::writeToNewApk)
-            .map(::alignApk).also { delete(rawDirectory) }
-            .let(::signApks).also { delete(alignedDirectory) }
-            .map(::copyToOutput).also { delete(signedDirectory) }.zip(patchedApks)
-            .map(::install)
-            .let(::cleanUp)
     }
 
     private fun uninstall() {

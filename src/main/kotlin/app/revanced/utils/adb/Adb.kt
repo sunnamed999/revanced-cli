@@ -1,63 +1,35 @@
 package app.revanced.utils.adb
 
-import app.revanced.cli.command.MainCommand
 import app.revanced.cli.logging.CliLogger
-import app.revanced.utils.adb.Constants.replacePlaceholder
 import se.vidstige.jadb.JadbConnection
 import se.vidstige.jadb.JadbDevice
+import se.vidstige.jadb.managers.Package
+import se.vidstige.jadb.managers.PackageManager
 import java.io.Closeable
-import java.util.concurrent.Executors
+import java.io.File
+import java.nio.file.Files
 
 internal sealed class Adb(deviceSerial: String) : Closeable {
-    val device: JadbDevice = JadbConnection().devices.find { it.serial == deviceSerial }
+    protected val device: JadbDevice = JadbConnection().devices.find { it.serial == deviceSerial }
         ?: throw IllegalArgumentException("The device with the serial $deviceSerial can not be found.")
 
+    protected val packageManager = PackageManager(device)
+
     open val logger: CliLogger? = null
-    abstract fun install(apk: Apk)
+
+    abstract fun install(base: Apk, splits: List<Apk>)
+
     abstract fun uninstall(packageName: String)
-
-
-    protected fun log(packageName: String) {
-        val executor = Executors.newSingleThreadExecutor()
-        val pipe = if (logger != null) {
-            ProcessBuilder.Redirect.INHERIT
-        } else {
-            ProcessBuilder.Redirect.PIPE
-        }
-
-        val process = device.buildCommand(Constants.COMMAND_LOGCAT.replacePlaceholder(packageName))
-            .redirectOutput(pipe)
-            .redirectError(pipe)
-            .useExecutor(executor)
-            .start()
-
-        Thread.sleep(500) // give the app some time to start up.
-        while (true) {
-            try {
-                while (device.run("${Constants.COMMAND_PID_OF} $packageName") == 0) {
-                    Thread.sleep(1000)
-                }
-                break
-            } catch (e: Exception) {
-                throw RuntimeException("An error occurred while monitoring the state of app", e)
-            }
-        }
-        MainCommand.logger.info("Stopped logging because the app was closed")
-        process.destroy()
-        executor.shutdown()
-    }
-
     override fun close() {
         logger?.trace("Closed")
     }
 
     class RootAdb(deviceSerial: String, override val logger: CliLogger? = null) : Adb(deviceSerial) {
         init {
-            if (device.run("su -h", false) != 0)
-                throw IllegalArgumentException("Root required on $deviceSerial. Task failed")
+            if (!device.hasSu()) throw IllegalArgumentException("Root required on $deviceSerial. Task failed")
         }
 
-        override fun install(apk: Apk) {
+        override fun install(base: Apk, splits: List<Apk>) {
             TODO("Install with root")
         }
 
@@ -67,36 +39,55 @@ internal sealed class Adb(deviceSerial: String) : Closeable {
     }
 
     class UserAdb(deviceSerial: String, override val logger: CliLogger? = null) : Adb(deviceSerial) {
-        override fun install(apk: Apk) {
-            TODO("Install without root")
+        private val replaceRegex = Regex("\\D+") // all non-digits
+        override fun install(base: Apk, splits: List<Apk>) {
+            logger?.info("Installing ${base.apk}")
+
+            /**
+             * Class storing the information required for the installation of an apk.
+             *
+             * @param apk The apk.
+             * @param size The size of the apk file. Inferred by default from [apk].
+             */
+            data class ApkInfo(val apk: Apk, val size: Long = Files.size(apk.file.toPath()))
+
+            val sizes = buildList {
+                val add = { apk: Apk -> add(ApkInfo(apk, Files.size(apk.file.toPath()))) }
+
+                add(base)
+                for (split in splits) add(split)
+            }
+
+            device.run("pm install-create -S ${sizes.sumOf { it.size }}").readLine().also { output ->
+                output.replace(replaceRegex, "")
+            }.also { sid ->
+                logger?.trace("Created session $sid")
+
+                sizes.onEachIndexed { index, (apk, size) ->
+                    val targetFilePath = "/sdcard/${apk.file.name}"
+                    device.copyFile(apk.file, targetFilePath)
+
+                    device.run("pm install-write -S $size $sid $index $targetFilePath")
+                    device.run("rm $targetFilePath")
+                }
+            }.let { sid ->
+                device.run("pm install-commit $sid")
+                logger?.trace("Committed session $sid")
+            }
         }
 
         override fun uninstall(packageName: String) {
-            TODO("Uninstall without root")
-        }
+            logger?.info("Uninstalling $packageName")
 
-    }
-
-    class Apk(patcherApk: app.revanced.patcher.Apk) {
-        public var file = patcherApk.file
-        val packageName = patcherApk.packageMetadata.packageName
-        val type = when (patcherApk) {
-            is app.revanced.patcher.Apk.Base -> Type.BASE
-            is app.revanced.patcher.Apk.Split.Asset -> Type.ASSET
-            is app.revanced.patcher.Apk.Split.Language -> Type.LANGUAGE
-            is app.revanced.patcher.Apk.Split.Library -> Type.LIBRARY
-        }
-
-        enum class Type {
-            BASE,
-            ASSET,
-            LANGUAGE,
-            LIBRARY
+            packageManager.uninstall(Package(packageName))
         }
     }
 
-    enum class InstallMode {
-        SPLIT,
-        FULL
-    }
+    /**
+     * Apk file for [Adb].
+     *
+     * @param apk The [app.revanced.patcher.apk.Apk] file.
+     * @param file The [File] of the [app.revanced.patcher.apk.Apk] file. Inferred by default from [apk].
+     */
+    class Apk(val apk: app.revanced.patcher.apk.Apk, val file: File = apk.file)
 }

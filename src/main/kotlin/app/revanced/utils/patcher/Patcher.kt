@@ -3,9 +3,9 @@ package app.revanced.utils.patcher
 import app.revanced.cli.command.MainCommand
 import app.revanced.cli.command.MainCommand.args
 import app.revanced.cli.command.MainCommand.logger
-import app.revanced.patcher.Apk
+import app.revanced.patcher.apk.Apk
 import app.revanced.patcher.Patcher
-import app.revanced.patcher.data.Context
+import app.revanced.patcher.Context
 import app.revanced.patcher.extensions.PatchExtensions.compatiblePackages
 import app.revanced.patcher.extensions.PatchExtensions.deprecated
 import app.revanced.patcher.extensions.PatchExtensions.include
@@ -13,8 +13,10 @@ import app.revanced.patcher.extensions.PatchExtensions.patchName
 import app.revanced.patcher.patch.Patch
 
 fun Patcher.addPatchesFiltered(allPatches: List<Class<out Patch<Context>>>, baseApk: Apk.Base) {
-    val packageName = baseApk.packageMetadata.packageName
-    val packageVersion = baseApk.packageMetadata.packageVersion
+    // asserting that thy are not null because it is base
+    this.context.classes
+    val packageName = baseApk.packageMetadata.packageName!!
+    val packageVersion = baseApk.packageMetadata.packageVersion!!
 
     val includedPatches = mutableListOf<Class<out Patch<Context>>>()
     allPatches.forEach patchLoop@{ patch ->
