@@ -3,18 +3,18 @@ package app.revanced.utils.patcher
 import app.revanced.cli.command.MainCommand
 import app.revanced.cli.command.MainCommand.args
 import app.revanced.cli.command.MainCommand.logger
-import app.revanced.patcher.apk.Apk
-import app.revanced.patcher.Patcher
 import app.revanced.patcher.Context
+import app.revanced.patcher.Patcher
+import app.revanced.patcher.apk.Apk
 import app.revanced.patcher.extensions.PatchExtensions.compatiblePackages
 import app.revanced.patcher.extensions.PatchExtensions.deprecated
 import app.revanced.patcher.extensions.PatchExtensions.include
 import app.revanced.patcher.extensions.PatchExtensions.patchName
 import app.revanced.patcher.patch.Patch
+import app.revanced.patcher.patch.PatchResult
 
 fun Patcher.addPatchesFiltered(allPatches: List<Class<out Patch<Context>>>, baseApk: Apk.Base) {
     // asserting that thy are not null because it is base
-    this.context.classes
     val packageName = baseApk.packageMetadata.packageName!!
     val packageVersion = baseApk.packageMetadata.packageVersion!!
 
@@ -70,12 +70,11 @@ fun Patcher.addPatchesFiltered(allPatches: List<Class<out Patch<Context>>>, base
 
 fun Patcher.applyPatchesVerbose() {
     this.executePatches().forEach { (patch, result) ->
-        if (result.isSuccess) {
+        if (result is PatchResult.Error) {
+            logger.error("$patch failed:\n${result.stackTraceToString()}")
+        } else {
             logger.info("$patch succeeded")
-            return@forEach
         }
-        logger.error("$patch failed:")
-        result.exceptionOrNull()!!.printStackTrace()
     }
 }
 
