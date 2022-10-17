@@ -59,7 +59,7 @@ internal sealed class Adb(deviceSerial: String) : Closeable {
 
             val installTargetPath = "/data/local/tmp/"
 
-            device.run("pm install-create -S ${sizes.sumOf { it.size }}").readLine()
+            device.run("pm install-create -S ${sizes.sumOf { it.size }}")
                 .replace(replaceRegex, "")
                 .also { sid ->
                     logger?.info("Created session $sid")
@@ -74,7 +74,7 @@ internal sealed class Adb(deviceSerial: String) : Closeable {
                             run("pm install-write -S $size $sid $index $installTargetFilePath")
                         }
                     }.also {
-                        logger?.info("Committing session $sid: ${device.run("pm install-commit $sid").readLine()}")
+                        logger?.info("Committing session $sid: ${device.run("pm install-commit $sid")}")
                     }.forEach { (apk, _) ->
                         device.run("rm $installTargetPath${apk.file.name}")
                     }
