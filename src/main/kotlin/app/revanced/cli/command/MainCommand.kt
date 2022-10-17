@@ -350,7 +350,7 @@ internal object MainCommand : Runnable {
             fun copyToOutput(apk: File): File {
                 logger.info("Copying ${apk.name} to output directory")
 
-                return patchingArgs.outputPath.also(File::mkdirs).resolve(apk.name).also {
+                return patchingArgs.outputPath.resolve(apk.name).also {
                     Files.copy(apk.toPath(), it.toPath(), StandardCopyOption.REPLACE_EXISTING)
                 }
             }
@@ -397,6 +397,7 @@ internal object MainCommand : Runnable {
             with(patcher.run()) {
                 map(::writeToNewApk)
                     .map(::alignApk).also { delete(patched) }
+                    .also { patchingArgs.outputPath.also(File::mkdirs) } // from now on this directory is required
                     .let(::signApks).also { delete(alignedDirectory) }
                     .map(::copyToOutput).also { delete(signedDirectory) }.zip(this)
                     .let(::install)
