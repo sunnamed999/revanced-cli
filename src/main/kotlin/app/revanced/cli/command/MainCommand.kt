@@ -282,7 +282,7 @@ internal object MainCommand : Runnable {
                             // store resources which are doNotCompress
                             // TODO(perf): make FileSystemUtils compress by default
                             //  by using app.revanced.utils.signing.align.zip.ZipFile
-                            apk.packageMetadata.doNotCompress.forEach(apkFileSystem::decompress)
+                            apk.packageMetadata.doNotCompress?.forEach(apkFileSystem::decompress)
                         }
 
                         // copy dex files for that apk to the cached apk, if it is a base apk
