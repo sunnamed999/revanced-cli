@@ -20,6 +20,7 @@ internal sealed class Adb(deviceSerial: String) : Closeable {
     abstract fun install(base: Apk, splits: List<Apk>)
 
     abstract fun uninstall(packageName: String)
+
     override fun close() {
         logger?.trace("Closed")
     }
@@ -41,8 +42,6 @@ internal sealed class Adb(deviceSerial: String) : Closeable {
     class UserAdb(deviceSerial: String, override val logger: CliLogger? = null) : Adb(deviceSerial) {
         private val replaceRegex = Regex("\\D+") // all non-digits
         override fun install(base: Apk, splits: List<Apk>) {
-            logger?.info("Installing ${base.apk}")
-
             /**
              * Class storing the information required for the installation of an apk.
              *
@@ -58,22 +57,28 @@ internal sealed class Adb(deviceSerial: String) : Closeable {
                 for (split in splits) add(split)
             }
 
-            device.run("pm install-create -S ${sizes.sumOf { it.size }}").readLine().also { output ->
-                output.replace(replaceRegex, "")
-            }.also { sid ->
-                logger?.trace("Created session $sid")
+            val installTargetPath = "/data/local/tmp/"
 
-                sizes.onEachIndexed { index, (apk, size) ->
-                    val targetFilePath = "/sdcard/${apk.file.name}"
-                    device.copyFile(apk.file, targetFilePath)
+            device.run("pm install-create -S ${sizes.sumOf { it.size }}").readLine()
+                .replace(replaceRegex, "")
+                .also { sid ->
+                    logger?.info("Created session $sid")
 
-                    device.run("pm install-write -S $size $sid $index $targetFilePath")
-                    device.run("rm $targetFilePath")
+                    sizes.onEachIndexed { index, (apk, size) ->
+                        val installTargetFilePath = "$installTargetPath${apk.file.name}"
+
+                        with(device) {
+                            copyFile(apk.file, installTargetFilePath)
+
+                            logger?.info("Staging $installTargetFilePath")
+                            run("pm install-write -S $size $sid $index $installTargetFilePath")
+                        }
+                    }.also {
+                        logger?.info("Committing session $sid: ${device.run("pm install-commit $sid").readLine()}")
+                    }.forEach { (apk, _) ->
+                        device.run("rm $installTargetPath${apk.file.name}")
+                    }
                 }
-            }.let { sid ->
-                device.run("pm install-commit $sid")
-                logger?.trace("Committed session $sid")
-            }
         }
 
         override fun uninstall(packageName: String) {
@@ -86,8 +91,9 @@ internal sealed class Adb(deviceSerial: String) : Closeable {
     /**
      * Apk file for [Adb].
      *
-     * @param apk The [app.revanced.patcher.apk.Apk] file.
-     * @param file The [File] of the [app.revanced.patcher.apk.Apk] file. Inferred by default from [apk].
+     * @param filePath The path to the [Apk] file.
      */
-    class Apk(val apk: app.revanced.patcher.apk.Apk, val file: File = apk.file)
+    internal class Apk(filePath: String) {
+        val file = File(filePath)
+    }
 }

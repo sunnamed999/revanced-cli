@@ -15,8 +15,8 @@ import app.revanced.patcher.patch.PatchResult
 
 fun Patcher.addPatchesFiltered(allPatches: List<Class<out Patch<Context>>>, baseApk: Apk.Base) {
     // asserting that thy are not null because it is base
-    val packageName = baseApk.packageMetadata.packageName!!
-    val packageVersion = baseApk.packageMetadata.packageVersion!!
+    val packageName = baseApk.packageMetadata.packageName
+    val packageVersion = baseApk.packageMetadata.packageVersion
 
     val includedPatches = mutableListOf<Class<out Patch<Context>>>()
     allPatches.forEach patchLoop@{ patch ->
