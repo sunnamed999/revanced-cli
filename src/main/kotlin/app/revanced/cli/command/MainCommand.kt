@@ -62,9 +62,6 @@ internal object MainCommand : Runnable {
             @Option(names = ["-b", "--bundle"], description = ["One or more bundles of patches"], required = true)
             var patchBundles = arrayOf<String>()
 
-            @Option(names = ["--options"], description = ["Configuration file for all patch options"])
-            var options: File = File("options.toml")
-
             @ArgGroup(exclusive = false)
             var listingArgs: ListingArgs? = null
 
@@ -79,7 +76,10 @@ internal object MainCommand : Runnable {
                 val apkArgs: ApkArgs? = null
 
                 @Option(names = ["-o", "--out"], description = ["Output folder path"], required = true)
-                lateinit var outputPath: File
+                var outputPath: File = File("revanced")
+
+                @Option(names = ["--options"], description = ["Configuration file for all patch options"])
+                var options: File =  outputPath.resolve("options.toml")
 
                 @Option(names = ["-e", "--exclude"], description = ["Explicitly exclude patches"])
                 var excludedPatches = arrayOf<String>()
@@ -216,7 +216,7 @@ internal object MainCommand : Runnable {
 
         // prepare patches
         val allPatches = patchArgs.patchBundles.flatMap { bundle -> PatchBundle.Jar(bundle).loadPatches() }.also {
-            OptionsLoader.init(patchArgs.options, it)
+            OptionsLoader.init(patchingArgs.options, it)
         }
 
         // prepare the patcher
@@ -324,7 +324,7 @@ internal object MainCommand : Runnable {
                         patchingArgs.cn,
                         patchingArgs.password,
                         patchingArgs.keystorePath
-                            ?: patchingArgs.outputPath.absoluteFile.parentFile.resolve("${baseApk.file.nameWithoutExtension}.keystore").canonicalPath
+                            ?: patchingArgs.outputPath.absoluteFile.resolve("${baseApk.file.nameWithoutExtension}.keystore").canonicalPath
                     )
                 )){
                     unsignedApks.map { unsignedApk -> // sign the unsigned apk
