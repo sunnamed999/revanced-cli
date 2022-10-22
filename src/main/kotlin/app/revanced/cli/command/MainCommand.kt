@@ -7,7 +7,7 @@ import app.revanced.cli.signing.SigningOptions
 import app.revanced.patcher.Patcher
 import app.revanced.patcher.PatcherOptions
 import app.revanced.patcher.apk.Apk
-import app.revanced.patcher.apk.SplitApkFile
+import app.revanced.patcher.apk.ApkBundle
 import app.revanced.patcher.extensions.PatchExtensions.compatiblePackages
 import app.revanced.patcher.extensions.PatchExtensions.description
 import app.revanced.patcher.extensions.PatchExtensions.patchName
@@ -204,13 +204,13 @@ internal object MainCommand : Runnable {
         val apkArgs = patchingArgs.apkArgs!!
 
         val baseApk = Apk.Base(apkArgs.baseApk)
-        val splitApks = buildList {
-            apkArgs.splitsArgs?.let {
-                with(it) {
-                    languageApk?.let { languageApk -> add(Apk.Split.Language(languageApk)) }
-                    libraryApk?.let { libraryApk -> add(Apk.Split.Library(libraryApk)) }
-                    assetApk?.let { assetApk -> add(Apk.Split.Asset(assetApk)) }
-                }
+        val splitApk = apkArgs.splitsArgs?.let {
+            with(it) {
+                ApkBundle.Split(
+                    libraryApk?.let { libraryApk -> Apk.Split.Library(libraryApk) },
+                    assetApk?.let { assetApk -> Apk.Split.Asset(assetApk) },
+                    languageApk?.let { languageApk -> Apk.Split.Language(languageApk) }
+                )
             }
         }
 
@@ -222,7 +222,7 @@ internal object MainCommand : Runnable {
         // prepare the patcher
         val patcher = Patcher( // constructor decodes base
             PatcherOptions(
-                SplitApkFile(baseApk, splitApks),
+                ApkBundle(baseApk, splitApk),
                 workDirectory.path,
                 patchingArgs.aaptPath,
                 workDirectory.path,
