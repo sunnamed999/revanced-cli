@@ -392,7 +392,7 @@ internal object MainCommand : Runnable {
              *
              * @return The resulting patched [Apk] files.
              */
-            fun Patcher.run() = with(this.start(allPatches, baseApk)) { save() }.files
+            fun Patcher.run() = with(this.start(allPatches, baseApk)) { save() }.apkFiles.map { it.apk }
 
             with(patcher.run()) {
                 map(::writeToNewApk)
