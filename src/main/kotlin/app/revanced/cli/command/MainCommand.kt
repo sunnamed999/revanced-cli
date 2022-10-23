@@ -148,19 +148,19 @@ internal object MainCommand : Runnable {
                             names = ["--language-apk"],
                             description = ["Additional split apk file which contains language files"], required = true
                         )
-                        var languageApk: String? = null
+                        lateinit var languageApk: String
 
                         @Option(
                             names = ["--library-apk"],
                             description = ["Additional split apk file which contains libraries"], required = true
                         )
-                        var libraryApk: String? = null
+                        lateinit var libraryApk: String
 
                         @Option(
                             names = ["--asset-apk"],
                             description = ["Additional split apk file which contains assets"], required = true
                         )
-                        var assetApk: String? = null
+                        lateinit var assetApk: String
                     }
                 }
             }
@@ -204,12 +204,12 @@ internal object MainCommand : Runnable {
         val apkArgs = patchingArgs.apkArgs!!
 
         val baseApk = Apk.Base(apkArgs.baseApk)
-        val splitApk = apkArgs.splitsArgs?.let {
-            with(it) {
+        val splitApk = apkArgs.splitsArgs?.let { args ->
+            with(args) {
                 ApkBundle.Split(
-                    libraryApk?.let { libraryApk -> Apk.Split.Library(libraryApk) },
-                    assetApk?.let { assetApk -> Apk.Split.Asset(assetApk) },
-                    languageApk?.let { languageApk -> Apk.Split.Language(languageApk) }
+                    Apk.Split.Library(libraryApk),
+                    Apk.Split.Asset(assetApk),
+                    Apk.Split.Language(languageApk)
                 )
             }
         }
