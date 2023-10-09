@@ -93,6 +93,101 @@
 * This changes the log handler signature
 * This introduces major changes to how ReVanced CLI is used from the command line.
 
+# [3.0.0](https://github.com/sunnamed999/revanced-cli/compare/v2.14.0...v3.0.0) (2023-10-09)
+
+
+### Bug Fixes
+
+* also delete temporary files when uninstalling ([52c3be2](https://github.com/sunnamed999/revanced-cli/commit/52c3be23f2915dccaee7f9941413c8f81e14acc8))
+* bump patcher dependency version ([51c04b7](https://github.com/sunnamed999/revanced-cli/commit/51c04b7b162ad2876bbeb248b7ccddd105b5076d))
+* check for package compatibility at first ([9fe5a0b](https://github.com/sunnamed999/revanced-cli/commit/9fe5a0b6d93304f630436ed0e954723d9a27b0f6))
+* Check, if mounting is possible ([3e13fb5](https://github.com/sunnamed999/revanced-cli/commit/3e13fb5d56eb2a90c2a4a1ddfc05852b1f70add5))
+* correct spelling mistake ([31fb316](https://github.com/sunnamed999/revanced-cli/commit/31fb3166d922ae1f568f52e44cbe726dd1c891a4))
+* Correct warning message ([ba573f7](https://github.com/sunnamed999/revanced-cli/commit/ba573f73d0e310fdeb8be2831fd40a7188473fff))
+* correctly word option descriptions ([ac3a8f6](https://github.com/sunnamed999/revanced-cli/commit/ac3a8f66f77a7218974465eebbfc78a536b76d51))
+* Create options if it does not exist when updating them ([ca809f0](https://github.com/sunnamed999/revanced-cli/commit/ca809f0948379e3a825f24d7a49aba8b6b8767d1))
+* Delete temporal files if it exists ([a022feb](https://github.com/sunnamed999/revanced-cli/commit/a022febd0c70807ddc3fa9948207a2a70d5191da))
+* delete temporary files after root installation ([a3d8705](https://github.com/sunnamed999/revanced-cli/commit/a3d8705e89732a0dd4f51de28c405b6af13c8633))
+* do not delete output file ([0f3e090](https://github.com/sunnamed999/revanced-cli/commit/0f3e090418771e951dfd15e5c193421f72cbe459))
+* do not filter explicitly included patches ([a3d8f00](https://github.com/sunnamed999/revanced-cli/commit/a3d8f004ec405f696d99d96c74ca41b573ecf425))
+* do not list compatible packages if patches do not define them ([31e4a41](https://github.com/sunnamed999/revanced-cli/commit/31e4a41dd20f5fa62f840cd8e3b92fe0814eda87))
+* Do not sign if mounting ([578e16b](https://github.com/sunnamed999/revanced-cli/commit/578e16b099fddfd2bb56accb225d04dfcd409b0c))
+* do not use absolute path from custom AAPT2 binary option ([a9c2a5f](https://github.com/sunnamed999/revanced-cli/commit/a9c2a5f096627dbbf8ab1b8da26fb14529ce6bc3))
+* don't log when package is incompatible and `exclusive` option is used ([ad81a1b](https://github.com/sunnamed999/revanced-cli/commit/ad81a1b656586226f8b7b8d1123c52b0f3f2e6f7))
+* exclude patcher dependency from minimizing ([d5794b9](https://github.com/sunnamed999/revanced-cli/commit/d5794b94ca19c9287190a3b863c97a089893cc07))
+* Filter logs correctly ([43fc20d](https://github.com/sunnamed999/revanced-cli/commit/43fc20d90e0a694b231b17bb7d9ecfa22bb5d9a0))
+* filtration of patches malfunctioning ([2d5a7fd](https://github.com/sunnamed999/revanced-cli/commit/2d5a7fdf1eb2e13f5013a790b03f09851b167fe0))
+* fix running commands not running ([2c7fcaf](https://github.com/sunnamed999/revanced-cli/commit/2c7fcaf4add65a12052afc5bef779dbc73debd69))
+* format patches input ([bbb1a63](https://github.com/sunnamed999/revanced-cli/commit/bbb1a63abd80dcbecdcf362158c0429cf3e6318f))
+* **gitignore:** ignore `options.toml` ([#158](https://github.com/sunnamed999/revanced-cli/issues/158)) ([7be9af0](https://github.com/sunnamed999/revanced-cli/commit/7be9af0942de2a834b9e57403d46263b65f1a422))
+* invalid header when writing a `ZipFile` ([#169](https://github.com/sunnamed999/revanced-cli/issues/169)) ([6e703eb](https://github.com/sunnamed999/revanced-cli/commit/6e703eb8e8d7da0e52266c4965f37bc8aafb409c))
+* Log correct options command ([#262](https://github.com/sunnamed999/revanced-cli/issues/262)) ([96c196d](https://github.com/sunnamed999/revanced-cli/commit/96c196dcb14e37ad91b751af61ee8382547c1ca3))
+* Log logs with levels over warning to error output stream ([075f6ad](https://github.com/sunnamed999/revanced-cli/commit/075f6ad56528a667dca1f0bed704cf7e5381026f))
+* only check once for patch options ([11c3a6c](https://github.com/sunnamed999/revanced-cli/commit/11c3a6cfd4fe59ba5d703358634a1853e1cc22a5))
+* Only open files for reading and writing if writeable ([3846f72](https://github.com/sunnamed999/revanced-cli/commit/3846f721ca015ab39a7e4b8d3f3d61163a6f1650))
+* Only set options for filtered patches ([64d9127](https://github.com/sunnamed999/revanced-cli/commit/64d9127291ea9a8abe21a0e82721721495094472))
+* print original instead of kebab cased names ([5eaad33](https://github.com/sunnamed999/revanced-cli/commit/5eaad33dc1fbd24c36e1498f04e21d068e85f53e))
+* print stack trace when a patch failed ([924c1f8](https://github.com/sunnamed999/revanced-cli/commit/924c1f80ec0d17a3bdc07a0fb2015e44c49162e4))
+* remove duplicate options entries. ([d0fc886](https://github.com/sunnamed999/revanced-cli/commit/d0fc8864286adc2677f91a319a11a90272c1001d))
+* specify correct class containing entry-point ([1fcc591](https://github.com/sunnamed999/revanced-cli/commit/1fcc591222ab67112f2b78174a8b94106846838c))
+* start with uppercase in log message ([ae91b0d](https://github.com/sunnamed999/revanced-cli/commit/ae91b0d597b107a152e1b630b8c16a795a7ca3b3))
+* **tests:** set order of tests ([2ef48af](https://github.com/sunnamed999/revanced-cli/commit/2ef48af1b339ab729a05d69cb0c8c1ee1e3ab486))
+* use correct option name ([f8972ea](https://github.com/sunnamed999/revanced-cli/commit/f8972eac3e5ee0a4a186c12cbe711925656d657b))
+* use correct prefix in log message ([1a67cd8](https://github.com/sunnamed999/revanced-cli/commit/1a67cd81da5ed7f259b6dbaeb66a7eef4a113034))
+* use working JADB dependency version ([#222](https://github.com/sunnamed999/revanced-cli/issues/222)) ([da2c918](https://github.com/sunnamed999/revanced-cli/commit/da2c91874d5623402febfcc0677ada3d648565e1))
+
+
+* refactor!: restructure code ([07da528](https://github.com/sunnamed999/revanced-cli/commit/07da528ce2223582f84bf64d2fec69714c647ddc))
+
+
+### Features
+
+* add appreciation message for new contributors ([6962fc2](https://github.com/sunnamed999/revanced-cli/commit/6962fc2f4c0f0c96e88a823be64f8ebd1312ee17))
+* Add function to get the most common compatible version ([77d9173](https://github.com/sunnamed999/revanced-cli/commit/77d91735ffbbd6e733f08176f535bfd39ece0c29))
+* add install command ([0350b7f](https://github.com/sunnamed999/revanced-cli/commit/0350b7f1a276d9dc795b22442ba4f202855ea090))
+* Add option to filter patches to be listed by package name ([50c0f98](https://github.com/sunnamed999/revanced-cli/commit/50c0f98ce5927e07839437a2e550aa85f5a7e62d))
+* Add option to warn about patches not being found in supplied patch bundles ([e46d855](https://github.com/sunnamed999/revanced-cli/commit/e46d85564320f46c6faa54b2d3fa7fca3fa60019))
+* add options command ([9edbbf3](https://github.com/sunnamed999/revanced-cli/commit/9edbbf31635603f89fc7bc5dcc6c023d4cdbb5a6))
+* Add ReVanced Library subproject ([#265](https://github.com/sunnamed999/revanced-cli/issues/265)) ([157278c](https://github.com/sunnamed999/revanced-cli/commit/157278c9ba25f0f786c5fe58e3e23f6890107118))
+* Check for missing integrations ([c93186f](https://github.com/sunnamed999/revanced-cli/commit/c93186fb9700907e65f33442e88073783cc163de))
+* connect to first device if given device was not found ([6485e47](https://github.com/sunnamed999/revanced-cli/commit/6485e477a10bb89dfb2e40f3596d72b20bf23cc8))
+* Do not format patch names ([80a8d88](https://github.com/sunnamed999/revanced-cli/commit/80a8d88406b2b04d13dca4fb0d7d7d62e1910317))
+* do not warn on incompatible packages ([39e377b](https://github.com/sunnamed999/revanced-cli/commit/39e377bc485e2892422e9712d30e6ff665856ac1))
+* Extend signing API ([592dc1c](https://github.com/sunnamed999/revanced-cli/commit/592dc1c64ae4078e73bb71eba11380b301c79dea))
+* Improve command line argument descriptions ([f9cf7d2](https://github.com/sunnamed999/revanced-cli/commit/f9cf7d21b7f1c2f11234d604a1047b9d2b165f83))
+* improve description of options ([#185](https://github.com/sunnamed999/revanced-cli/issues/185)) ([b69e784](https://github.com/sunnamed999/revanced-cli/commit/b69e784785f7f262f83b35c4f241c90036169fc7))
+* improve missing compatibility annotation tracing log ([2c7eb72](https://github.com/sunnamed999/revanced-cli/commit/2c7eb7274c713dfbcb53c5f3b6a9205c751914fa))
+* Improve option descriptions ([d5ea5a0](https://github.com/sunnamed999/revanced-cli/commit/d5ea5a0ab1cc015730063e5be94ee18bd88cc906))
+* Log stacktrace in new line ([c67e3c7](https://github.com/sunnamed999/revanced-cli/commit/c67e3c70c7eaa514cde1bebe775a2216bc4a6074))
+* properly make use of logging facade ([41898d7](https://github.com/sunnamed999/revanced-cli/commit/41898d7547690e3130372414515c5645e5dc2634))
+* remove option `--with-descriptions` ([07a423b](https://github.com/sunnamed999/revanced-cli/commit/07a423b19ec72e9f020aeb0222f4ced571036dbe))
+* show full package name when listing patches ([#240](https://github.com/sunnamed999/revanced-cli/issues/240)) ([7174364](https://github.com/sunnamed999/revanced-cli/commit/7174364ef8ef5d6ce8351a8340f9c1a5b58eac3c))
+* Simplify command description ([3b3f7c7](https://github.com/sunnamed999/revanced-cli/commit/3b3f7c7a7a7b2795e3d1fad776f6b457f2e68c7b))
+* simplify log message ([74d73ca](https://github.com/sunnamed999/revanced-cli/commit/74d73ca3a7ba2f5da872fe9a241629e1c143cd4e))
+* trace logs when compatibility annotation is missing ([#166](https://github.com/sunnamed999/revanced-cli/issues/166)) ([c590bf5](https://github.com/sunnamed999/revanced-cli/commit/c590bf559c4d2d2667c2af0c0da23d4706fcd4b7))
+* use `am` instead of `monkey` to launch the app ([#159](https://github.com/sunnamed999/revanced-cli/issues/159)) ([6a35cf7](https://github.com/sunnamed999/revanced-cli/commit/6a35cf7ea46a4474120626ce03d28490cc96bf07))
+* use better logging text ([b0e748d](https://github.com/sunnamed999/revanced-cli/commit/b0e748daff527ee7f417b3069882e074896fc131))
+* use friendly descriptions ([3dd875d](https://github.com/sunnamed999/revanced-cli/commit/3dd875d14cca488ade6d21bbd4cce0d481692134))
+* use new patch naming convention ([f6c221d](https://github.com/sunnamed999/revanced-cli/commit/f6c221d72dc43ebea00e5eba6bfa02751ae8ad77))
+* Use ReVanced Library in ReVanced CLI ([7794327](https://github.com/sunnamed999/revanced-cli/commit/7794327a11e8a0e0f28176cd45fad797b924c45f))
+* use separate command to list patches ([b74213f](https://github.com/sunnamed999/revanced-cli/commit/b74213f66e0d04d3a0ae6197d069631388e06580))
+* use separate command to patch ([32da961](https://github.com/sunnamed999/revanced-cli/commit/32da961d57537e99b39fd92b625a1c73f8314bc6))
+* use separate command to uninstall ([c0cc909](https://github.com/sunnamed999/revanced-cli/commit/c0cc90962646cfffd5e2730ae556423271a7990b))
+* use simpler log ([ba758f0](https://github.com/sunnamed999/revanced-cli/commit/ba758f00f4ce18791439b7e72fe1ad2e7f11f8af))
+* Word log message better ([6942b22](https://github.com/sunnamed999/revanced-cli/commit/6942b22a68de5e991987ea89882915917aec93a3))
+
+
+### Performance Improvements
+
+* Do not check, if the options file exists twice ([e3c5550](https://github.com/sunnamed999/revanced-cli/commit/e3c55507cf52e697b9ce9d59decc1cbe4cfe5b43))
+
+
+### BREAKING CHANGES
+
+* This changes many signatures of existing APIs and adds new functions for signing
+* This changes the log handler signature
+* This introduces major changes to how ReVanced CLI is used from the command line.
+
 ## [4.0.1](https://github.com/ReVanced/revanced-cli/compare/v4.0.0...v4.0.1) (2023-10-08)
 
 
