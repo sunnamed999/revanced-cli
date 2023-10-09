@@ -88,19 +88,19 @@ internal object PatchCommand : Runnable {
         names = ["--keystore-password"],
         description = ["The password of the keystore to sign the patched APK file with"],
     )
-    private var keyStorePassword: String? = null // Empty password by default
+    private var keyStorePassword: String = "ReVanced" // Legacy password
 
     @CommandLine.Option(
         names = ["--alias"], description = ["The alias of the key from the keystore to sign the patched APK file with"],
         showDefaultValue = ALWAYS
     )
-    private var alias = "ReVanced Key"
+    private var alias = "alias" // Legacy alias
 
     @CommandLine.Option(
         names = ["--keystore-entry-password"],
         description = ["The password of the entry from the keystore for the key to sign the patched APK file with"]
     )
-    private var password = "" // Empty password by default
+    private var password = "ReVanced" // Legacy password
 
     @CommandLine.Option(
         names = ["--signer"], description = ["The name of the signer to sign the patched APK file with"],
@@ -116,6 +116,17 @@ internal object PatchCommand : Runnable {
     private var resourceCachePath = File("revanced-resource-cache")
 
     private var aaptBinaryPath: File? = null
+
+
+    @CommandLine.Option(
+        names = ["--unsigned"], description = ["Disable signing of the final apk"]
+    )
+    private var unsigned: Boolean = false
+
+    @CommandLine.Option(
+        names = ["--rip-lib"], description = ["Rip native libs from APK (x86_64 etc.)"]
+    )
+    private var ripLibs = arrayOf<String>()
 
     @CommandLine.Option(
         names = ["-p", "--purge"],
@@ -237,23 +248,25 @@ internal object PatchCommand : Runnable {
             // region Save
 
             val tempFile = resourceCachePath.resolve(apk.name).apply {
-                ApkUtils.copyAligned(apk, this, patcherResult)
+                ApkUtils.copyAligned(apk, this, patcherResult, ripLibs)
             }
 
             val keystoreFilePath = keystoreFilePath ?: outputFilePath.absoluteFile.parentFile
                 .resolve("${outputFilePath.nameWithoutExtension}.keystore")
 
-            if (!mount) ApkUtils.sign(
-                tempFile,
-                outputFilePath,
-                ApkUtils.SigningOptions(
-                    keystoreFilePath,
-                    keyStorePassword,
-                    alias,
-                    password,
-                    signer
+            if (!mount || !unsigned) {
+                ApkUtils.sign(
+                    tempFile,
+                    outputFilePath,
+                    ApkUtils.SigningOptions(
+                        keystoreFilePath,
+                        keyStorePassword,
+                        alias,
+                        password,
+                        signer
+                    )
                 )
-            )
+            }
 
             // endregion
 
